@@ -1,3 +1,3 @@
 # huchat
 
-goalng으로 합시다
+goalng으로 합시다.

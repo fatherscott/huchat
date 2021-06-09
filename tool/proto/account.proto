@@ -1,0 +1,12 @@
+syntax = "proto3";
+option csharp_namespace = "CommonLib.Protocol";
+
+message Account_Login_Request {
+    int64 AccountId = 1;
+    int64 RoomId = 2;
+}
+
+message Account_Login_Response {
+	int32 Result = 1,
+
+}

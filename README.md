@@ -1,3 +1,5 @@
 # huchat
 
-goalng으로 합시다.
+server는 golang. 
+
+client는 netcore, unity 따로

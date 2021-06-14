@@ -7,6 +7,6 @@ message Account_Login_Request {
 }
 
 message Account_Login_Response {
-	int32 Result = 1,
+	int32 Result = 1;
 
 }

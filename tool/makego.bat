@@ -1,2 +1,2 @@
-FOR %%I in (../input/*.proto) DO protoc -I=../Input --go_out=../../../../Packet/%%~nI %%~nxI
+FOR %%I in (proto/*.proto) DO protoc -I=proto --go_out=../packet/%%~nI %%~nxI
 pause

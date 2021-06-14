@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"errors"
+	Packet "huchat/packet"
 	"net"
 	"net/http"
 	"sync/atomic"
@@ -57,14 +58,12 @@ func (e *EndPoint) WSListener() {
 
 }
 
-//ReadWS 데이터 읽기
-func ReadWS(ctx context.Context, c *websocket.Conn, counter *int64) (interface{}, error) {
-	if counter != nil {
-		defer atomic.AddInt64(counter, 2)
-	}
+//ReadWS ReadWS
+func (e *EndPoint) ReadWS(ctx context.Context, c *websocket.Conn) (interface{}, error) {
+	defer atomic.AddInt64(&e.RecvCount, 1)
 
-	header := Packet.GetHeader()
-	defer Packet.Release(header)
+	header := GetHeader()
+	defer SetHeader(header)
 
 	err := wspb.Read(ctx, c, header)
 	if err != nil {
@@ -72,16 +71,65 @@ func ReadWS(ctx context.Context, c *websocket.Conn, counter *int64) (interface{}
 	}
 
 	switch header.Type {
-	case Packet.Header_CS_Enter:
-		csEnter := Packet.GetCSEnter()
-		err := wspb.Read(ctx, c, csEnter)
-		return csEnter, err
-
-	case Packet.Header_CS_Broadcast:
-		csBroadcast := Packet.GetCSBroadcast()
-		err := wspb.Read(ctx, c, csBroadcast)
-		return csBroadcast, err
+	case Packet.Header_Type_LoginRequest:
+	case Packet.Header_Type_LogOutRequest:
+	case Packet.Header_Type_MessageRequest:
 	}
 
 	return nil, errors.New("invalid packet")
+}
+
+//WriteWS WriteWS
+func (e *EndPoint) WriteWS(ctx context.Context, c *websocket.Conn, v interface{}, accountId string) error {
+	defer atomic.AddInt64(&e.SendCount, 1)
+
+	defer Packet.Release(v)
+
+	header := Packet.GetHeader()
+	defer Packet.Release(header)
+
+	switch packet := v.(type) {
+
+	case *Packet.CS_Enter_Ack:
+		header.Type = Packet.Header_CS_Enter_Ack
+		err := wspb.Write(ctx, c, header)
+		if err != nil {
+			return err
+		}
+		Packet.Log(gameUID, "CS_Enter_Ack", v)
+
+		return wspb.Write(ctx, c, packet)
+
+	case *Packet.SC_Enter_Second:
+		header.Type = Packet.Header_SC_Enter_Second
+		err := wspb.Write(ctx, c, header)
+		if err != nil {
+			return err
+		}
+		Packet.Log(gameUID, "SC_Enter_Second", v)
+
+		return wspb.Write(ctx, c, packet)
+
+	case *Packet.CS_Broadcast_Ack:
+		header.Type = Packet.Header_CS_Broadcast_Ack
+		err := wspb.Write(ctx, c, header)
+		if err != nil {
+			return err
+		}
+		Packet.Log(gameUID, "CS_Broadcast_Ack", v)
+
+		return wspb.Write(ctx, c, packet)
+
+	case *Packet.SC_Broadcast:
+		header.Type = Packet.Header_SC_Broadcast
+		err := wspb.Write(ctx, c, header)
+		if err != nil {
+			return err
+		}
+		Packet.Log(gameUID, "SC_Broadcast", v)
+
+		return wspb.Write(ctx, c, packet)
+	}
+
+	return errors.New("not support type")
 }

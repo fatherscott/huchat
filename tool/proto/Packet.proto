@@ -1,0 +1,50 @@
+syntax = "proto3";
+option csharp_namespace = "CommonLib.Protocol";
+
+enum Header_Type {
+    LoginRequest = 0;
+    LoginResponse = 1;
+    LogOutRequest = 2;
+    LogOutResponse = 3;
+    MessageRequest = 4;
+    MessageResponse = 5;
+}
+
+message Header {
+    Header_Type Type = 1;
+}
+
+  
+message Login_Request {
+    string AccountId = 1;
+    string RoomId = 2;
+}
+
+message Login_Response {
+    int32 Result = 1;
+    string AccountId = 2;
+    string RoomId = 3;
+}
+
+message LogOut_Request {
+    string AccountId = 1;
+}
+
+message LogOut_Response {
+    int32 Result = 1;
+    string AccountId = 2;
+    string RoomId = 3;
+}
+
+message Message_Request {
+    string AccountId = 1;
+    int32 type = 2;
+    string Message = 3;
+}
+
+message Message_Response {
+    int32 Result = 1;
+    string AccountId = 2;
+    string RoomId = 3;
+    string Message = 4;
+}

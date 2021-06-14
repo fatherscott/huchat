@@ -6,4 +6,8 @@ client는 netcore, unity 따로
 
 Add Packet 
 -------------
-ㅅㄷㅅㄷㅅㄷ
+move tool/proto
+upsert *.proto
+move tool
+run makego.bat
+check packet folder

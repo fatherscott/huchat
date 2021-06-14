@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"huchat/model"
 	"os"
 	"os/signal"
@@ -9,20 +8,16 @@ import (
 )
 
 func main() {
-	fmt.Println("HuChat Start")
-
 	e := model.NewServer()
-
-	//Verify socket operation
-	<-e.WSListenerMaked
-
 	// Setup our Ctrl+C handler
 	SetupCloseHandler(e)
+
+	e.INFO.Println("HuChat Start")
 
 	//All listen is waiting until closed.
 	e.WaitListener.Wait()
 
-	fmt.Println("HuChat Stop")
+	e.INFO.Println("HuChat Stop")
 }
 
 // SetupCloseHandler creates a 'listener' on a new goroutine which will notify the
@@ -33,7 +28,7 @@ func SetupCloseHandler(e *model.EndPoint) {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		fmt.Println("\r- Ctrl+C pressed in Terminal")
+		e.INFO.Println("\r- Ctrl+C pressed in Terminal")
 		e.Cancel()
 
 	}()

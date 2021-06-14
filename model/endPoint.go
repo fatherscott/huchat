@@ -20,7 +20,8 @@ type EndPoint struct {
 
 	WSListenerMaked chan bool
 
-	Ctx    context.Context
+	Ctx context.Context
+	//Related Function Exit Request
 	Cancel context.CancelFunc
 }
 

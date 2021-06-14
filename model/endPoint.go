@@ -26,6 +26,9 @@ type EndPoint struct {
 	Ctx context.Context
 	//Related Function Exit Request
 	Cancel context.CancelFunc
+
+	RecvCount int64
+	SendCount int64
 }
 
 //NewServer NewServer

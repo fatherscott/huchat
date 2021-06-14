@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-//MainListener 작업
+//MainListener create
 func (e *EndPoint) MainListener() {
 	defer func() {
 		e.WaitListener.Done()

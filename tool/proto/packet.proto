@@ -1,6 +1,15 @@
 syntax = "proto3";
 option csharp_namespace = "CommonLib.Protocol";
 
+enum Header {
+    LoginRequest = 0;
+    LoginResponse = 1;
+    LogOutRequest = 2;
+    LogOutResponse = 3;
+    MessageRequest = 4;
+    MessageResponse = 5;
+}
+  
 message Login_Request {
     string AccountId = 1;
     string RoomId = 2;

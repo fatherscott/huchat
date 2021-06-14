@@ -1,11 +1,15 @@
 package model
 
 import (
+	"context"
+	"errors"
 	"net"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"nhooyr.io/websocket"
+	"nhooyr.io/websocket/wspb"
 )
 
 //WSListener Wait for message
@@ -51,4 +55,33 @@ func (e *EndPoint) WSListener() {
 		}
 	}
 
+}
+
+//ReadWS 데이터 읽기
+func ReadWS(ctx context.Context, c *websocket.Conn, counter *int64) (interface{}, error) {
+	if counter != nil {
+		defer atomic.AddInt64(counter, 2)
+	}
+
+	header := Packet.GetHeader()
+	defer Packet.Release(header)
+
+	err := wspb.Read(ctx, c, header)
+	if err != nil {
+		return nil, err
+	}
+
+	switch header.Type {
+	case Packet.Header_CS_Enter:
+		csEnter := Packet.GetCSEnter()
+		err := wspb.Read(ctx, c, csEnter)
+		return csEnter, err
+
+	case Packet.Header_CS_Broadcast:
+		csBroadcast := Packet.GetCSBroadcast()
+		err := wspb.Read(ctx, c, csBroadcast)
+		return csBroadcast, err
+	}
+
+	return nil, errors.New("invalid packet")
 }

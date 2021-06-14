@@ -1,31 +1,53 @@
 package model
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"sync"
 )
 
 type EndPoint struct {
 	WSBind string
 	INFO   *log.Logger
+
+	Server *http.Server
+
+	WaitClient   sync.WaitGroup
+	WaitListener sync.WaitGroup
+
+	WSListenerMaked chan bool
+
+	Ctx    context.Context
+	Cancel context.CancelFunc
 }
 
-//Initialize Initialize object
-func (e *EndPoint) Initialize() {
+//NewServer NewServer
+func NewServer() *EndPoint {
+
+	e := &EndPoint{
+		WSListenerMaked: make(chan bool),
+	}
 	e.INFO = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 	e.LoadConfig("conf.json")
 
+	e.Ctx, e.Cancel = context.WithCancel(context.Background())
+
+	e.WaitListener.Add(1)
+
+	go e.WSListener()
+	return e
 }
 
-//Load Read the settings from the file.
+//LoadConfig Read the settings from the file.
 func (e *EndPoint) LoadConfig(filePath string) bool {
 	file, _ := os.Open(filePath)
 	decoder := json.NewDecoder(file)
 	err := decoder.Decode(e)
 	if err != nil {
-		fmt.Println(err.Error())
+		e.INFO.Panicln(err)
 		return false
 	}
 	return true

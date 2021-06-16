@@ -3,7 +3,7 @@ package model
 import (
 	"context"
 	"errors"
-	Packet "huchat/packet"
+	"huchat/Protocol"
 	"net"
 	"net/http"
 	"sync/atomic"
@@ -62,8 +62,8 @@ func (e *EndPoint) WSListener() {
 func (e *EndPoint) ReadWS(ctx context.Context, c *websocket.Conn) (interface{}, error) {
 	defer atomic.AddInt64(&e.RecvCount, 1)
 
-	header := GetHeader()
-	defer SetHeader(header)
+	header := Protocol.GetRequestHeader()
+	defer Protocol.SetHeader(header)
 
 	err := wspb.Read(ctx, c, header)
 	if err != nil {
@@ -71,63 +71,45 @@ func (e *EndPoint) ReadWS(ctx context.Context, c *websocket.Conn) (interface{}, 
 	}
 
 	switch header.Type {
-	case Packet.Header_Type_LoginRequest:
-	case Packet.Header_Type_LogOutRequest:
-	case Packet.Header_Type_MessageRequest:
+	case Protocol.HeaderType_T_LoginRequest:
+		packet := Protocol.GetLoginRequest()
+		err := wspb.Read(ctx, c, packet)
+		return packet, err
+
+	case Protocol.HeaderType_T_LogoutRequest:
+		packet := Protocol.GetLogoutRequest()
+		err := wspb.Read(ctx, c, packet)
+		return packet, err
+
+	case Protocol.HeaderType_T_MessageRequest:
+		packet := Protocol.GetMessageRequest()
+		err := wspb.Read(ctx, c, packet)
+		return packet, err
 	}
 
 	return nil, errors.New("invalid packet")
 }
 
 //WriteWS WriteWS
-func (e *EndPoint) WriteWS(ctx context.Context, c *websocket.Conn, v interface{}, accountId string) error {
+func (e *EndPoint) WriteWS(ctx context.Context, c *websocket.Conn, v interface{}) error {
 	defer atomic.AddInt64(&e.SendCount, 1)
 
-	defer Packet.Release(v)
+	header := Protocol.GetResponseHeader(v)
+	defer Protocol.SetHeader(header)
 
-	header := Packet.GetHeader()
-	defer Packet.Release(header)
+	err := wspb.Write(ctx, c, header)
+	if err != nil {
+		return err
+	}
 
 	switch packet := v.(type) {
-
-	case *Packet.CS_Enter_Ack:
-		header.Type = Packet.Header_CS_Enter_Ack
-		err := wspb.Write(ctx, c, header)
-		if err != nil {
-			return err
-		}
-		Packet.Log(gameUID, "CS_Enter_Ack", v)
-
+	case *Protocol.LoginResponse:
 		return wspb.Write(ctx, c, packet)
 
-	case *Packet.SC_Enter_Second:
-		header.Type = Packet.Header_SC_Enter_Second
-		err := wspb.Write(ctx, c, header)
-		if err != nil {
-			return err
-		}
-		Packet.Log(gameUID, "SC_Enter_Second", v)
-
+	case *Protocol.LogoutResponse:
 		return wspb.Write(ctx, c, packet)
 
-	case *Packet.CS_Broadcast_Ack:
-		header.Type = Packet.Header_CS_Broadcast_Ack
-		err := wspb.Write(ctx, c, header)
-		if err != nil {
-			return err
-		}
-		Packet.Log(gameUID, "CS_Broadcast_Ack", v)
-
-		return wspb.Write(ctx, c, packet)
-
-	case *Packet.SC_Broadcast:
-		header.Type = Packet.Header_SC_Broadcast
-		err := wspb.Write(ctx, c, header)
-		if err != nil {
-			return err
-		}
-		Packet.Log(gameUID, "SC_Broadcast", v)
-
+	case *Protocol.MessageResponse:
 		return wspb.Write(ctx, c, packet)
 	}
 

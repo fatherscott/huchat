@@ -15,6 +15,7 @@ Add Packet
 * add sync pool
 
 ~~~proto
+tool/proto/Protocol.proto
 //add header
 enum HeaderType {
     ...
@@ -27,6 +28,7 @@ message sample {
 ~~~
 
 ~~~go
+Protocol/sample.go
 var PoolSample = sync.Pool{
 	New: func() interface{} {
 		return new(Sample)

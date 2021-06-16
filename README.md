@@ -12,7 +12,7 @@ Add Packet
 ~~~go
 var PoolSample = sync.Pool{
 	New: func() interface{} {
-		return new(Header)
+		return new(Sample)
 	},
 }
 

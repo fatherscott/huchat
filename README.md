@@ -8,3 +8,19 @@ Add Packet
 * move tool
 * run makego.bat
 * check Protocol folder
+* add sync pool
+~~~go
+var PoolSample = sync.Pool{
+	New: func() interface{} {
+		return new(Header)
+	},
+}
+
+func GetSample() *Sample {
+	return PoolSample.Get().(*Sample)
+}
+
+func (m *Sample) Release() {
+	PoolSample.Put(m)
+}
+~~~

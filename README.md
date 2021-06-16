@@ -13,6 +13,19 @@ Add Packet
 * run makego.bat
 * check Protocol folder
 * add sync pool
+
+~~~proto
+//add header
+enum HeaderType {
+    ...
+    T_Sample = ?;
+}
+
+//add body
+message sample {
+}
+~~~
+
 ~~~go
 var PoolSample = sync.Pool{
 	New: func() interface{} {

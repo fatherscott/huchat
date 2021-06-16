@@ -1,5 +1,9 @@
 # huchat
 
+Used
+-------------
+github.com/golang/protobuf
+nhooyr.io/websocket
 
 Add Packet 
 -------------

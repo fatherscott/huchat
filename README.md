@@ -2,8 +2,8 @@
 
 Used
 -------------
-github.com/golang/protobuf
-nhooyr.io/websocket
+* github.com/golang/protobuf
+* nhooyr.io/websocket
 
 Add Packet 
 -------------

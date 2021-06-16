@@ -4,7 +4,6 @@ import (
 	"context"
 	"huchat/Protocol"
 	"strings"
-	"sync"
 	"time"
 
 	"nhooyr.io/websocket"
@@ -14,6 +13,9 @@ import (
 type Client struct {
 	EndPoint  *EndPoint
 	AccountId string
+	Level     int32
+	NickName  string
+	RoomId    string
 
 	Channel chan interface{}
 
@@ -23,47 +25,45 @@ type Client struct {
 	Cancel context.CancelFunc
 }
 
-// ClientPool sync.Pool
-var ClientPool = sync.Pool{
-	New: func() interface{} {
-		client := new(Client)
-		client.Channel = make(chan interface{}, 8)
-		client.Ctx, client.Cancel = context.WithCancel(context.Background())
-		return client
-	},
-}
+// // ClientPool sync.Pool
+// var ClientPool = sync.Pool{
+// 	New: func() interface{} {
+// 		client := new(Client)
+// 		client.Channel = make(chan interface{}, 8)
+// 		client.Ctx, client.Cancel = context.WithCancel(context.Background())
+// 		return client
+// 	},
+// }
 
-//Reset Reset
-func (c *Client) Reset() {
+// //Reset Reset
+// func (c *Client) Reset() {
 
-	c.EndPoint = nil
-	c.AccountId = ""
-	c.Conn = nil
-	close(c.Channel)
+// 	c.EndPoint = nil
+// 	c.AccountId = ""
+// 	c.Level = 0
+// 	c.NickName = ""
+// 	c.Conn = nil
+// 	close(c.Channel)
 
-	c.Channel = make(chan interface{}, 16)
-	c.Ctx, c.Cancel = context.WithCancel(context.Background())
-}
+// 	c.Channel = make(chan interface{}, 8)
+// 	c.Ctx, c.Cancel = context.WithCancel(context.Background())
+// }
 
 // NewClient
 func (e *EndPoint) NewClient(conn *websocket.Conn) {
 
-	var (
-		accountId string
-		level     int32
-		nickName  string
-	)
-
-	client := ClientPool.Get().(*Client)
-	client.EndPoint = e
-	client.Conn = conn
+	client := &Client{
+		Channel:  make(chan interface{}, 8),
+		EndPoint: e,
+		Conn:     conn,
+	}
+	client.Ctx, client.Cancel = context.WithCancel(context.Background())
 
 	defer func() {
 		if err := recover(); err != nil {
 			e.INFO.Println("NewClient", "RunTime Panic", string(Stack()), err)
 		}
-		client.Reset()
-		ClientPool.Put(client)
+		close(client.Channel)
 		e.WaitClient.Done()
 	}()
 
@@ -81,15 +81,15 @@ func (e *EndPoint) NewClient(conn *websocket.Conn) {
 		//deepCopy
 		var sb1 strings.Builder
 		sb1.WriteString(login.AccountId)
-		accountId = sb1.String()
+		client.AccountId = sb1.String()
 
 		var sb2 strings.Builder
 		sb2.WriteString(login.NickName)
-		nickName = sb2.String()
+		client.NickName = sb2.String()
 
-		level = login.Level
+		client.Level = login.Level
 
-		e.INFO.Panicln(accountId, nickName, level)
+		e.INFO.Println(client.AccountId, client.NickName, client.Level)
 
 		login.Release()
 

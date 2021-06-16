@@ -19,7 +19,7 @@ type EndPoint struct {
 	WaitListener sync.WaitGroup
 
 	WSListenerMaked   chan bool
-	MainListenerMaked chan bool
+	ListenerMaked chan bool
 
 	MainChannel chan interface{}
 
@@ -36,7 +36,7 @@ func NewServer() *EndPoint {
 
 	e := &EndPoint{
 		WSListenerMaked:   make(chan bool),
-		MainListenerMaked: make(chan bool),
+		ListenerMaked: make(chan bool),
 		MainChannel:       make(chan interface{}, 2048),
 	}
 	e.INFO = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
@@ -50,9 +50,9 @@ func NewServer() *EndPoint {
 	//Verify socket operation
 	<-e.WSListenerMaked
 
-	go e.MainListener()
+	go e.CreateListener()
 	//Verify parse operation
-	<-e.MainListenerMaked
+	<-e.ListenerMaked
 	return e
 }
 

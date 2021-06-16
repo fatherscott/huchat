@@ -8,7 +8,7 @@ var PoolLogOutRequest = sync.Pool{
 	},
 }
 
-func GetLogOutRequest() *LogoutRequest {
+func GetLogoutRequest() *LogoutRequest {
 	return PoolLogOutRequest.Get().(*LogoutRequest)
 }
 

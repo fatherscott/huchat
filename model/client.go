@@ -2,7 +2,10 @@ package model
 
 import (
 	"context"
+	"huchat/Protocol"
+	"strings"
 	"sync"
+	"time"
 
 	"nhooyr.io/websocket"
 )
@@ -11,7 +14,10 @@ import (
 type Client struct {
 	EndPoint  *EndPoint
 	AccountId string
-	Conn      *websocket.Conn
+
+	Channel chan interface{}
+
+	Conn *websocket.Conn
 
 	Ctx    context.Context
 	Cancel context.CancelFunc
@@ -21,13 +27,10 @@ type Client struct {
 var ClientPool = sync.Pool{
 	New: func() interface{} {
 		client := new(Client)
+		client.Channel = make(chan interface{}, 8)
+		client.Ctx, client.Cancel = context.WithCancel(context.Background())
 		return client
 	},
-}
-
-//Make 처음 생성시
-func (c *Client) Make() {
-	c.Ctx, c.Cancel = context.WithCancel(context.Background())
 }
 
 //Reset Reset
@@ -36,103 +39,83 @@ func (c *Client) Reset() {
 	c.EndPoint = nil
 	c.AccountId = ""
 	c.Conn = nil
+	close(c.Channel)
 
-	c.Ctx = nil
-	c.Cancel = nil
+	c.Channel = make(chan interface{}, 16)
+	c.Ctx, c.Cancel = context.WithCancel(context.Background())
 }
 
-// NewClient 개인 유저 처리
+// NewClient
 func (e *EndPoint) NewClient(conn *websocket.Conn) {
 
-	// var (
-	// 	accountId string
-	// 	seq       uint32
-	// )
+	var (
+		accountId string
+		level     int32
+		nickName  string
+	)
 
-	// client := ClientPool.Get().(*Client)
-	// client.EndPoint = e
-	// client.Conn = conn
+	client := ClientPool.Get().(*Client)
+	client.EndPoint = e
+	client.Conn = conn
 
-	// defer func() {
-	// 	if err := recover(); err != nil {
-	// 		fmt.Println("NewClient", "RunTime Panic", string(Stack()), err)
-	// 	}
-	// 	client.Reset()
-	// 	ClientPool.Put(client)
-	// 	e.WaitClient.Done()
-	// }()
+	defer func() {
+		if err := recover(); err != nil {
+			e.INFO.Println("NewClient", "RunTime Panic", string(Stack()), err)
+		}
+		client.Reset()
+		ClientPool.Put(client)
+		e.WaitClient.Done()
+	}()
 
-	//타임 아웃 설정
-	// firstCtx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-	// defer cancel()
+	//Timeout Settings
+	firstCtx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
 
-	// v, err := ReadWS(firstCtx, client.Conn, &e.RecvCount)
-	// if err != nil {
-	// 	close(client.SyncSender)
-	// 	return
-	// }
+	v, err := e.ReadWS(firstCtx, client.Conn)
+	if err != nil {
+		return
+	}
 
-	// switch message := v.(type) {
-	// case *Packet.CS_Enter:
-	// 	gameUID = uint64(message.GameUID)
-	// 	seq = message.SEQ
-	// }
-	// Packet.Release(v)
+	switch login := v.(type) {
+	case *Protocol.LoginRequest:
+		//deepCopy
+		var sb1 strings.Builder
+		sb1.WriteString(login.AccountId)
+		accountId = sb1.String()
 
-	// if gameUID == 0 {
-	// 	close(client.SyncSender)
-	// 	return
-	// }
+		var sb2 strings.Builder
+		sb2.WriteString(login.NickName)
+		nickName = sb2.String()
 
-	// Packet.Log(gameUID, "CS_Enter", v)
+		level = login.Level
 
-	// dbSeq, result := e.Redis.GetSEQ(gameUID)
-	// if result == false {
-	// 	close(client.SyncSender)
-	// 	return
-	// }
+		e.INFO.Panicln(accountId, nickName, level)
 
-	// if dbSeq != seq {
-	// 	close(client.SyncSender)
-	// 	return
-	// }
+		login.Release()
 
-	// client.GameUID = gameUID
+	default:
+		return
+	}
 
-	// go client.SendWorker(e)
-	// <-client.SyncSender
+	for {
+		select {
+		case <-client.Ctx.Done():
+			return
+		case <-client.Channel:
+			return
+		default:
+			//If you don't react for five minutes, you'll fail.
+			ctx, mainCancel := context.WithTimeout(context.Background(), time.Second*600)
+			defer mainCancel()
 
-	// //세션에 등록
-	// sessionEnter := GetSessionEnter()
-	// sessionEnter.Client = client
-	// e.SessionChannel <- sessionEnter
-	// <-client.SyncSession
-
-	// for {
-	// 	select {
-	// 	case <-client.Context.Done():
-	// 		return
-	// 	default:
-	// 		//5분동안 반응 없으면 에러처리
-	// 		ctx, mainCancel := context.WithTimeout(context.Background(), time.Second*600)
-	// 		defer mainCancel()
-
-	// 		v, err := ReadWS(ctx, client.Conn, &e.RecvCount)
-	// 		if err != nil {
-	// 			return
-	// 		}
-
-	// 		switch message := v.(type) {
-	// 		case *Packet.CS_Broadcast:
-
-	// 			Packet.Log(gameUID, "CS_Broadcast", v)
-
-	// 			broadcast := GetBroadcast()
-	// 			broadcast.Client = client
-	// 			broadcast.Message = message.Message
-	// 			e.SessionChannel <- broadcast
-	// 		}
-	// 		Packet.Release(v)
-	// 	}
-	// }
+			v, err := e.ReadWS(ctx, client.Conn)
+			if err != nil {
+				return
+			}
+			switch message := v.(type) {
+			case *Protocol.MessageRequest:
+				message.Release()
+			}
+		}
+	}
 }

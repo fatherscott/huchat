@@ -2,30 +2,30 @@ package Protocol
 
 import "sync"
 
-var PoolLoginRequest = syn.Pool{
-	New: func() interfae{} {
-		rturn new(Header)
-	,
-
+var PoolLoginRequest = sync.Pool{
+	New: func() interface{} {
+		return new(Header)
+	},
+}
 
 func GetLoginRequest() *LoginRequest {
-	eturn PoolLoginRequest.Get().(*LoginRequest)
+	return PoolLoginRequest.Get().(*LoginRequest)
+}
 
+func (m *LoginRequest) Release() {
+	PoolLoginRequest.Put(m)
+}
 
-func (m *LoginRequest) Rlease() {
-	oolLoginRequest.Put(m)
-
-
-var PoolLoginResponse = syc.Pool{
+var PoolLoginResponse = sync.Pool{
 	New: func() interface{} {
-		rturn new(LoginResponse)
-	,
-
+		return new(LoginResponse)
+	},
+}
 
 func GetLoginResponse() *LoginResponse {
-	eturn PoolLoginResponse.Get().(*LoginResponse)
+	return PoolLoginResponse.Get().(*LoginResponse)
+}
 
-
-func (m *LoginResponse) Rlease() {
-	oolLoginResponse.Put(m)
+func (m *LoginResponse) Release() {
+	PoolLoginResponse.Put(m)
 }

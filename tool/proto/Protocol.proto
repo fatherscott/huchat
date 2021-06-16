@@ -20,6 +20,7 @@ message LoginRequest {
     string RoomId = 2;
     int32 Level = 3;
     string NickName = 4;
+    string Token = 5;
 }
 
 message LoginResponse {

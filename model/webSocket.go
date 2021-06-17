@@ -47,7 +47,7 @@ func (e *EndPoint) WSListener() {
 	}
 	defer e.Server.Close()
 
-	e.WSListenerMaked <- true
+	e.ListenerMaked <- true
 
 	for {
 		select {
@@ -72,17 +72,12 @@ func (e *EndPoint) ReadWS(ctx context.Context, c *websocket.Conn) (interface{}, 
 
 	switch header.Type {
 	case Protocol.HeaderType_T_LoginRequest:
-		packet := Protocol.GetLoginRequest()
-		err := wspb.Read(ctx, c, packet)
-		return packet, err
-
-	case Protocol.HeaderType_T_LogoutRequest:
-		packet := Protocol.GetLogoutRequest()
+		packet := &Protocol.LoginRequest{}
 		err := wspb.Read(ctx, c, packet)
 		return packet, err
 
 	case Protocol.HeaderType_T_MessageRequest:
-		packet := Protocol.GetMessageRequest()
+		packet := &Protocol.MessageRequest{}
 		err := wspb.Read(ctx, c, packet)
 		return packet, err
 	}

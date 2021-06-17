@@ -16,7 +16,6 @@ func SetHeader(p *Header) {
 
 // GetRequestHeader GetRequestHeader
 func GetRequestHeader() *Header {
-
 	return HeaderPool.Get().(*Header)
 }
 

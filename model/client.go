@@ -3,7 +3,6 @@ package model
 import (
 	"context"
 	"huchat/Protocol"
-	"strings"
 	"time"
 
 	"nhooyr.io/websocket"
@@ -78,24 +77,17 @@ func (e *EndPoint) NewClient(conn *websocket.Conn) {
 
 	switch login := v.(type) {
 	case *Protocol.LoginRequest:
-		//deepCopy
-		var sb1 strings.Builder
-		sb1.WriteString(login.AccountId)
-		client.AccountId = sb1.String()
-
-		var sb2 strings.Builder
-		sb2.WriteString(login.NickName)
-		client.NickName = sb2.String()
-
+		client.AccountId = login.AccountId
+		client.NickName = login.NickName
 		client.Level = login.Level
-
+		client.RoomId = login.RoomId
 		e.INFO.Println(client.AccountId, client.NickName, client.Level)
-
-		login.Release()
 
 	default:
 		return
 	}
+
+	e.ListenerChannel <- client
 
 	for {
 		select {
@@ -110,11 +102,16 @@ func (e *EndPoint) NewClient(conn *websocket.Conn) {
 
 			v, err := e.ReadWS(ctx, client.Conn)
 			if err != nil {
+				leave := Protocol.GetLeaveUser()
+				e.ListenerChannel <- leave
 				return
 			}
-			switch message := v.(type) {
+			switch obj := v.(type) {
 			case *Protocol.MessageRequest:
-				message.Release()
+				message := Protocol.GetMessageUser()
+				message.AccountId = client.AccountId
+				message.Msaage = obj.Message
+				e.ListenerChannel <- message
 			}
 		}
 	}

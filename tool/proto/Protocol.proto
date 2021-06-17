@@ -24,12 +24,10 @@ message LoginRequest {
 }
 
 message LoginResponse {
-    int32 Result = 1;
-    string AccountId = 2;
-}
-
-message LogoutRequest {
     string AccountId = 1;
+    string RoomId = 2;
+    int32 Level = 3;
+    string NickName = 4;
 }
 
 message LogoutResponse {
@@ -45,8 +43,6 @@ message MessageRequest {
 }
 
 message MessageResponse {
-    int32 Result = 1;
-    string AccountId = 2;
-    string RoomId = 3;
-    string Message = 4;
+    string AccountId = 1;
+    string Message = 2;
 }

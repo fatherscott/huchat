@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"huchat/Protocol"
 )
 
 type Listener struct {
@@ -23,7 +24,7 @@ func (e *EndPoint) CreateListener() {
 	e.ListenerMaked <- true
 
 	for {
-		if listener.MainParser(e) {
+		if listener.Parse(e) {
 			return
 		}
 	}
@@ -46,7 +47,7 @@ func (l *Listener) Leave(c *Client) {
 	}
 }
 
-func (l *Listener) Enter(c *Client) {
+func (l *Listener) Enter(c *Client) map[string]*Client {
 
 	l.Clients[c.AccountId] = c
 	_, exists := l.Rooms[c.RoomId]
@@ -55,31 +56,39 @@ func (l *Listener) Enter(c *Client) {
 	}
 
 	l.Rooms[c.RoomId][c.AccountId] = c
+
+	return l.Rooms[c.RoomId]
 }
 
-//MainParser
-func (l *Listener) MainParser(e *EndPoint) (exit bool) {
+//Parse
+func (l *Listener) Parse(e *EndPoint) (exit bool) {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Println("MainParser", "RunTime Panic", string(Stack()), err)
+			fmt.Println("Parse", "RunTime Panic", string(Stack()), err)
 		}
 	}()
 
 	exit = false
 
 	select {
-	case input := <-e.MainChannel:
+	case input := <-e.ListenerChannel:
 		switch obj := input.(type) {
 
-		case *EnterRequest:
-			l.Leave(obj.Client)
-			l.Enter(obj.Client)
+		case *Client:
+			l.Leave(obj)
+			room := l.Enter(obj)
 
-		case *SendMessageRequest:
-			e.INFO.Println(obj)
+			sendLogin := Protocol.GetSendLogin()
+			for _, v := range room {
+				sendLogin.Connections = append(sendLogin.Connections, v.Conn)
+			}
 
-		case *LeaveRequest:
-			l.Leave(obj.Client)
+			sendLogin.Packet.AccountId = obj.AccountId
+			sendLogin.Packet.RoomId = obj.RoomId
+			sendLogin.Packet.Level = obj.Level
+			sendLogin.Packet.NickName = obj.NickName
+
+			e.SenderChannel <- sendLogin
 		}
 
 	case <-e.Ctx.Done():

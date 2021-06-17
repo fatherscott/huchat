@@ -4,10 +4,8 @@ option csharp_namespace = "CommonLib.Protocol";
 enum HeaderType {
     T_LoginRequest = 0;
     T_LoginResponse = 1;
-    T_LogoutRequest = 2;
-    T_LogoutResponse = 3;
-    T_MessageRequest = 4;
-    T_MessageResponse = 5;
+    T_MessageRequest = 2;
+    T_MessageResponse = 3;
 }
 
 message Header {
@@ -24,16 +22,7 @@ message LoginRequest {
 }
 
 message LoginResponse {
-    string AccountId = 1;
-    string RoomId = 2;
-    int32 Level = 3;
-    string NickName = 4;
-}
-
-message LogoutResponse {
     int32 Result = 1;
-    string AccountId = 2;
-    string RoomId = 3;
 }
 
 message MessageRequest {
@@ -45,4 +34,7 @@ message MessageRequest {
 message MessageResponse {
     string AccountId = 1;
     string Message = 2;
+    string RoomId = 3;
+    int32 Level = 4;
+    string NickName = 5;
 }

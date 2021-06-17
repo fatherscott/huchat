@@ -81,7 +81,7 @@ func (e *EndPoint) NewClient(conn *websocket.Conn) {
 		client.NickName = login.NickName
 		client.Level = login.Level
 		client.RoomId = login.RoomId
-		e.INFO.Println(client.AccountId, client.NickName, client.Level)
+		e.INFO.Println(client.AccountId, client.Level, client.NickName, client.RoomId)
 
 	default:
 		return
@@ -92,6 +92,7 @@ func (e *EndPoint) NewClient(conn *websocket.Conn) {
 	for {
 		select {
 		case <-client.Ctx.Done():
+			e.INFO.Println("hard close", client.NickName)
 			return
 		case <-client.Channel:
 			return
@@ -102,6 +103,7 @@ func (e *EndPoint) NewClient(conn *websocket.Conn) {
 
 			v, err := e.ReadWS(ctx, client.Conn)
 			if err != nil {
+				e.INFO.Println("close", client.NickName)
 				leave := Protocol.GetLeaveUser()
 				e.ListenerChannel <- leave
 				return

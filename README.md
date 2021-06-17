@@ -26,21 +26,3 @@ enum HeaderType {
 message sample {
 }
 ~~~
-
-
-#### Protocol/sample.go
-~~~go
-var PoolSample = sync.Pool{
-	New: func() interface{} {
-		return new(Sample)
-	},
-}
-
-func GetSample() *Sample {
-	return PoolSample.Get().(*Sample)
-}
-
-func (m *Sample) Release() {
-	PoolSample.Put(m)
-}
-~~~

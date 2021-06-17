@@ -30,21 +30,25 @@ func (e *EndPoint) CreateListener() {
 	}
 }
 
-func (l *Listener) Leave(c *Client) {
-	val, exists := l.Clients[c.AccountId]
+func (l *Listener) Leave(accountId string) bool {
+	val, exists := l.Clients[accountId]
 	var roomId string
 	if exists {
 		roomId = val.RoomId
 		val.Cancel()
-		delete(l.Clients, c.AccountId)
+		delete(l.Clients, accountId)
 	}
 
 	if len(roomId) > 0 {
 		room, exists := l.Rooms[roomId]
 		if exists {
-			delete(room, c.AccountId)
+			delete(room, accountId)
+		}
+		if len(room) == 0 {
+			delete(l.Rooms, roomId)
 		}
 	}
+	return exists
 }
 
 func (l *Listener) Enter(c *Client) map[string]*Client {
@@ -75,20 +79,24 @@ func (l *Listener) Parse(e *EndPoint) (exit bool) {
 		switch obj := input.(type) {
 
 		case *Client:
-			l.Leave(obj)
-			room := l.Enter(obj)
+			if l.Leave(obj.AccountId) {
+				obj.Cancel()
 
-			sendLogin := Protocol.GetSendLogin()
-			for _, v := range room {
-				sendLogin.Connections = append(sendLogin.Connections, v.Conn)
+				sendLogin := Protocol.GetSendLogin()
+				sendLogin.Packet.Result = 0
+				sendLogin.Connection = obj.Conn
+				e.SenderChannel <- sendLogin
+
+			} else {
+				l.Enter(obj)
+
+				sendLogin := Protocol.GetSendLogin()
+				sendLogin.Packet.Result = 1
+				sendLogin.Connection = obj.Conn
+				e.SenderChannel <- sendLogin
 			}
-
-			sendLogin.Packet.AccountId = obj.AccountId
-			sendLogin.Packet.RoomId = obj.RoomId
-			sendLogin.Packet.Level = obj.Level
-			sendLogin.Packet.NickName = obj.NickName
-
-			e.SenderChannel <- sendLogin
+		case *Protocol.LeaveUser:
+			l.Leave(obj.AccountId)
 		}
 
 	case <-e.Ctx.Done():

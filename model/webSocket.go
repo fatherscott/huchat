@@ -30,7 +30,7 @@ func (e *EndPoint) WSListener() {
 	e.Server = &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			//e.INFO.Println("serving", r.RemoteAddr)
+			e.INFO.Println("serving", r.RemoteAddr)
 
 			c, err := websocket.Accept(w, r, nil)
 			if err != nil {
@@ -41,21 +41,16 @@ func (e *EndPoint) WSListener() {
 
 			//client full close check
 			e.WaitClient.Add(1)
+
+			e.NewClient(c)
+
 		}),
 		ReadTimeout:  time.Second * 30,
 		WriteTimeout: time.Second * 30,
 	}
-	defer e.Server.Close()
 
 	e.ListenerMaked <- true
-
-	for {
-		select {
-		case <-e.Ctx.Done():
-			return
-		}
-	}
-
+	e.Server.Serve(l)
 }
 
 //ReadWS ReadWS
@@ -99,9 +94,6 @@ func (e *EndPoint) WriteWS(ctx context.Context, c *websocket.Conn, v interface{}
 
 	switch packet := v.(type) {
 	case *Protocol.LoginResponse:
-		return wspb.Write(ctx, c, packet)
-
-	case *Protocol.LogoutResponse:
 		return wspb.Write(ctx, c, packet)
 
 	case *Protocol.MessageResponse:

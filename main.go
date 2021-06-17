@@ -30,6 +30,6 @@ func SetupCloseHandler(e *model.EndPoint) {
 		<-c
 		e.INFO.Println("\r- Ctrl+C pressed in Terminal")
 		e.Cancel()
-
+		e.Server.Close()
 	}()
 }

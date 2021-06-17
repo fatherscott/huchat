@@ -12,6 +12,6 @@ type MessageUser struct {
 }
 
 type SendLogin struct {
-	Connections []*websocket.Conn
-	Packet      LoginResponse
+	Connection *websocket.Conn
+	Packet     LoginResponse
 }

@@ -28,9 +28,6 @@ func GetResponseHeader(v interface{}) *Header {
 	case *LoginResponse:
 		header.Type = HeaderType_T_LoginResponse
 
-	case *LogoutResponse:
-		header.Type = HeaderType_T_LogoutResponse
-
 	case *MessageResponse:
 		header.Type = HeaderType_T_MessageResponse
 	}

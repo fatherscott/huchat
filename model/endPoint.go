@@ -18,10 +18,10 @@ type EndPoint struct {
 	WaitClient   sync.WaitGroup
 	WaitListener sync.WaitGroup
 
-	ListenerMaked   chan bool
+	ListenerMaked chan bool
 
 	ListenerChannel chan interface{}
-	SenderChannel chan interface{}
+	SenderChannel   chan interface{}
 
 	Ctx context.Context
 	//Related Function Exit Request
@@ -35,16 +35,16 @@ type EndPoint struct {
 func NewServer() *EndPoint {
 
 	e := &EndPoint{
-		ListenerMaked: make(chan bool),
-		ListenerChannel:       make(chan interface{}, 2048),
-		SenderChannel:       make(chan interface{}, 256),
+		ListenerMaked:   make(chan bool),
+		ListenerChannel: make(chan interface{}, 2048),
+		SenderChannel:   make(chan interface{}, 256),
 	}
 	e.INFO = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 	e.LoadConfig("conf.json")
 
 	e.Ctx, e.Cancel = context.WithCancel(context.Background())
 
-	e.WaitListener.Add(2)
+	e.WaitListener.Add(3)
 
 	go e.WSListener()
 	//Verify socket operation

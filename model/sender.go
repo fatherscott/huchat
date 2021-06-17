@@ -41,13 +41,10 @@ func (s *Sender) Parse(e *EndPoint) (exit bool) {
 	case input := <-e.SenderChannel:
 		switch obj := input.(type) {
 		case *Protocol.SendLogin:
-			for _, con := range obj.Connections {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			e.WriteWS(ctx, obj.Connection, &obj.Packet)
 
-				ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*500)
-				defer cancel()
-
-				e.WriteWS(ctx, con, &obj.Packet)
-			}
+			cancel()
 			obj.Release()
 		}
 

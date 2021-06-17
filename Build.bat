@@ -8,6 +8,6 @@ go build -o HuChat.exe main.go
 
 SET "GOOS=darwin"
 SET "GOARCH=amd64"
-go build -o HuChatMac main.go
+go build -o HuChatEXEC main.go
 
 pause

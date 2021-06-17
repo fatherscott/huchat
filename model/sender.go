@@ -43,8 +43,14 @@ func (s *Sender) Parse(e *EndPoint) (exit bool) {
 		case *Protocol.SendLogin:
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 			e.WriteWS(ctx, obj.Connection, &obj.Packet)
-
 			cancel()
+			obj.Release()
+		case *Protocol.SendMessage:
+			for _, conn := range obj.Connections {
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+				e.WriteWS(ctx, conn, &obj.Packet)
+				cancel()
+			}
 			obj.Release()
 		}
 

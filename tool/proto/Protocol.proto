@@ -26,9 +26,8 @@ message LoginResponse {
 }
 
 message MessageRequest {
-    string AccountId = 1;
-    int32 type = 2;
-    string Message = 3;
+    int32 type = 1;
+    string Message = 2;
 }
 
 message MessageResponse {

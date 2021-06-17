@@ -43,3 +43,17 @@ func GetSendLogin() *SendLogin {
 func (m *SendLogin) Release() {
 	PoolSendLogin.Put(m)
 }
+
+var PoolSendMessage = sync.Pool{
+	New: func() interface{} {
+		return new(SendMessage)
+	},
+}
+
+func GetSendMessage() *SendMessage {
+	return PoolSendMessage.Get().(*SendMessage)
+}
+
+func (m *SendMessage) Release() {
+	PoolSendMessage.Put(m)
+}

@@ -112,7 +112,10 @@ func (e *EndPoint) NewClient(conn *websocket.Conn) {
 			case *Protocol.MessageRequest:
 				message := Protocol.GetMessageUser()
 				message.AccountId = client.AccountId
-				message.Msaage = obj.Message
+				message.Message = obj.Message
+
+				e.INFO.Println("message", client.NickName, "->", obj.Message)
+
 				e.ListenerChannel <- message
 			}
 		}

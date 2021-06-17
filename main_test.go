@@ -11,20 +11,18 @@ import (
 	"nhooyr.io/websocket/wspb"
 )
 
-func TestLogin(t *testing.T) {
-	e := model.NewServer()
-
-	time.Sleep(2 * time.Second)
-
+func LoginClien(t *testing.T, url string, accountId string, result int32) *websocket.Conn {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	c, _, err := websocket.Dial(ctx, "ws://localhost:7000", nil)
+	c, _, err := websocket.Dial(ctx, url, nil)
 	if err != nil {
 		t.Error(err)
 	}
 
 	header := Protocol.GetRequestHeader()
+	defer Protocol.SetHeader(header)
+
 	header.Type = Protocol.HeaderType_T_LoginRequest
 
 	err = wspb.Write(ctx, c, header)
@@ -33,10 +31,10 @@ func TestLogin(t *testing.T) {
 	}
 
 	loginRequest := &Protocol.LoginRequest{
-		AccountId: "admin",
+		AccountId: accountId,
 		RoomId:    "default",
 		Level:     99,
-		NickName:  "scott",
+		NickName:  accountId,
 	}
 
 	err = wspb.Write(ctx, c, loginRequest)
@@ -59,10 +57,20 @@ func TestLogin(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if loginResponse.Result != 1 {
+
+	if loginResponse.Result != result {
 		t.Error("invalid result")
 	}
 
+	return c
+}
+
+func TestLogin(t *testing.T) {
+	e := model.NewServer()
+
+	time.Sleep(2 * time.Second)
+
+	c := LoginClien(t, "ws://localhost:7000", "admin", 1)
 	c.Close(websocket.StatusNormalClosure, "")
 
 	e.Cancel()
@@ -76,104 +84,105 @@ func TestMultiLogin(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
-	defer cancel()
+	c := LoginClien(t, "ws://localhost:7000", "admin", 1)
+	defer c.Close(websocket.StatusNormalClosure, "")
 
-	c, _, err := websocket.Dial(ctx, "ws://localhost:7000", nil)
-	if err != nil {
-		t.Error(err)
-	}
-	defer c.Close(websocket.StatusInternalError, "the sky is falling")
+	c2 := LoginClien(t, "ws://localhost:7000", "admin", 0)
+	c2.Close(websocket.StatusNormalClosure, "")
 
 	header := Protocol.GetRequestHeader()
+	defer Protocol.SetHeader(header)
 	header.Type = Protocol.HeaderType_T_LoginRequest
 
-	err = wspb.Write(ctx, c, header)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	err := wspb.Write(ctx, c, header)
 	if err != nil {
 		t.Error(err)
 	}
 
-	loginRequest := &Protocol.LoginRequest{
+	err = wspb.Write(ctx, c, &Protocol.LoginRequest{
 		AccountId: "admin",
 		RoomId:    "default",
 		Level:     99,
 		NickName:  "scott",
-	}
-
-	err = wspb.Write(ctx, c, loginRequest)
+	})
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = wspb.Read(ctx, c, header)
+	e.Cancel()
+	e.Server.Close()
+
+	//All listen is waiting until closed.
+	e.WaitListener.Wait()
+}
+
+func RecvMessage(t *testing.T, c *websocket.Conn, accountId string) *websocket.Conn {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	header := Protocol.GetRequestHeader()
+	defer Protocol.SetHeader(header)
+
+	err := wspb.Read(ctx, c, header)
 	if err != nil {
 		t.Error(err)
 	}
 
-	if header.Type != Protocol.HeaderType_T_LoginResponse {
+	if header.Type != Protocol.HeaderType_T_MessageResponse {
 		t.Error("invalid packet")
 	}
 
-	loginResponse := &Protocol.LoginResponse{}
+	messageResponse := &Protocol.MessageResponse{}
 
-	err = wspb.Read(ctx, c, loginResponse)
+	err = wspb.Read(ctx, c, messageResponse)
 	if err != nil {
 		t.Error(err)
 	}
-	if loginResponse.Result != 1 {
+
+	if messageResponse.AccountId != accountId {
 		t.Error("invalid result")
 	}
 
+	return c
+}
+
+func TestMessage(t *testing.T) {
+	e := model.NewServer()
+
+	time.Sleep(2 * time.Second)
+
+	c := LoginClien(t, "ws://localhost:7000", "admin", 1)
 	defer c.Close(websocket.StatusNormalClosure, "")
 
-	c2, _, err := websocket.Dial(ctx, "ws://localhost:7000", nil)
-	if err != nil {
-		t.Error(err)
-	}
-	defer c2.Close(websocket.StatusInternalError, "the sky is falling")
+	c2 := LoginClien(t, "ws://localhost:7000", "admin2", 1)
+	defer c2.Close(websocket.StatusNormalClosure, "")
 
-	header.Type = Protocol.HeaderType_T_LoginRequest
-	err = wspb.Write(ctx, c2, header)
-	if err != nil {
-		t.Error(err)
-	}
+	header := Protocol.GetRequestHeader()
+	defer Protocol.SetHeader(header)
+	header.Type = Protocol.HeaderType_T_MessageRequest
 
-	err = wspb.Write(ctx, c2, loginRequest)
-	if err != nil {
-		t.Error(err)
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
 
-	err = wspb.Read(ctx, c2, header)
+	err := wspb.Write(ctx, c, header)
 	if err != nil {
 		t.Error(err)
 	}
 
-	if header.Type != Protocol.HeaderType_T_LoginResponse {
-		t.Error("invalid packet")
-	}
+	err = wspb.Write(ctx, c, &Protocol.MessageRequest{
+		Type:    1,
+		Message: "I heard that your dreams came true",
+	})
 
-	err = wspb.Read(ctx, c2, loginResponse)
 	if err != nil {
 		t.Error(err)
 	}
 
-	if loginResponse.Result != 0 {
-		t.Error("invalid type")
-	}
-
-	c2.Close(websocket.StatusNormalClosure, "")
-
-	header.Type = Protocol.HeaderType_T_LoginRequest
-
-	err = wspb.Write(ctx, c, header)
-	if err != nil {
-		t.Error(err)
-	}
-
-	err = wspb.Write(ctx, c, loginRequest)
-	if err != nil {
-		t.Error(err)
-	}
+	RecvMessage(t, c, "admin")
+	RecvMessage(t, c2, "admin")
 
 	e.Cancel()
 	e.Server.Close()
